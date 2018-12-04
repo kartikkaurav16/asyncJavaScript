@@ -1,0 +1,32 @@
+db.getCollection('audit_log_objects').aggregate([
+  {$match : {"reasonCode": 174, "createdDate": { $gte:new Date("2018-08-01T00:00:00.000Z"), $lte:new Date("2018-08-02T00:00:00.000Z")}}},
+  {$project : {"ccoUserId": 1 ,"createdDate" :1,"reasonCode": 1, "entitlementAuditId":1, "mdfLeafNodeId":1}},
+{ $group: {
+        "_id": {
+            ccoUserId: "$ccoUserId",
+            mdfLeafNodeId: "$mdfLeafNodeId",
+            reasonCode: "$reasonCode", 
+        },
+         createdDate: {$first : '$createdDate' },
+         entitlementAuditId:{$first :'$entitlementAuditId'}       
+    }
+ },
+ {$lookup:{
+         from: "reverse_mapping_audit_objects",
+         localField: "entitlementAuditId",
+         foreignField: "entitlementAuditId",
+         as: "entitlementAuditIdDocs"}}, 
+   { $unwind : "$entitlementAuditIdDocs"}, 
+   { $unwind : "$entitlementAuditIdDocs.reverseMappingObjects"},
+   { $project: {
+        _id: 0,
+       "ccoUserId":'$_id.ccoUserId', 
+       "createdDate" :1, 
+       "reasonCode":'$_id.reasonCode' , 
+       "entitlementAuditId":1, 
+       "mdfLeafNodeId":'$_id.mdfLeafNodeId', 
+       "itemFamilyName": "$entitlementAuditIdDocs.reverseMappingObjects.itemFamilyName",
+       "itemName": "$entitlementAuditIdDocs.reverseMappingObjects.itemName",
+       "inventoryItemId": "$entitlementAuditIdDocs.reverseMappingObjects.inventoryItemId"
+    }}
+])
